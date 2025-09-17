@@ -1,11 +1,13 @@
 public class CompanyRepo
 {
-    private readonly string _conStr;
+    public CompanyRepo() { }
 
-    public CompanyRepo()
+    public List<Company> GetAllCompanies()
     {
-        _conStr = DbConfig.GetConnectionString();
+        return [.. DbHandler.GetAll<Company>()];
     }
+
+    public Company? GetCompanyById(int id) => DbHandler.GetById<Company>(id);
 
     
 }
