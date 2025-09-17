@@ -4,7 +4,7 @@ namespace MyApi.Controllers
 {
     [ApiController]
     [Route("api/main")]
-    public class ItemsController : ControllerBase
+    public class MainController : ControllerBase
     {
         [HttpGet("test")]
         public IActionResult Test()
