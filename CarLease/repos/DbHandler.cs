@@ -16,6 +16,103 @@ public static class DbHandler
                 $"password={Environment.GetEnvironmentVariable("MYSQL_PASSWORD")}";
     }
 
+    public static bool Delete<T>(int id)
+    {
+        var props = typeof(T).GetProperties();
+        var name = typeof(T).ToString();
+        List<string> propNames = [.. props.ToList().Select(p => p.Name)];
+
+        var sql = $"DELETE FROM {ToSnakeCase(name)} WHERE {ToSnakeCase(propNames[0])} = @id";
+
+        using var connection = new MySqlConnection(GetConnectionString());
+        connection.Open();
+
+        using var cmd = new MySqlCommand(sql, connection);
+        cmd.Parameters.AddWithValue("@id", id);
+
+        return cmd.ExecuteNonQuery() > 0;
+    }
+
+    public static bool Put<T>(T obj)
+    {
+        var props = typeof(T).GetProperties();
+        var name = typeof(T).ToString();
+        List<string> propNames = [.. props.ToList().Select(p => p.Name)];
+
+        var sql = $"UPDATE {ToSnakeCase(name)} SET";
+        props.ToList().ForEach(p =>
+        {
+            var prop = ToSnakeCase(p.Name);
+            if (props.ToList().IndexOf(p) == props.Length - 1)
+                sql += $" {prop} = @{prop}";
+            else
+                sql += $" {prop} = @{prop},";
+        });
+
+        sql += $" WHERE {ToSnakeCase(propNames[0])} = @id";
+
+        using var connection = new MySqlConnection(GetConnectionString());
+        connection.Open();
+
+        Console.WriteLine(sql);
+
+        using var cmd = new MySqlCommand(sql, connection);
+        props.ToList().ForEach(prop =>
+        {
+            var key = prop.Name;
+            var value = prop.GetValue(obj);
+            cmd.Parameters.AddWithValue($"@{ToSnakeCase(key)}", value);
+        });
+
+        return cmd.ExecuteNonQuery() > 0;
+    }
+
+    public static T Post<T>(T obj)
+    {
+        var props = typeof(T).GetProperties();
+        var name = typeof(T).ToString();
+        List<string> propNames = [.. props.ToList().Select(p => p.Name)];
+
+        var sql = $"INSERT INTO {ToSnakeCase(name)} (";
+
+        props.ToList().ForEach(p =>
+        {
+            var prop = ToSnakeCase(p.Name);
+            if (props.ToList().IndexOf(p) == props.Length - 1)
+                sql += $" {prop}) VALUES (";
+            else if (props.ToList().IndexOf(p) == 0)
+                sql += $"{prop},";
+            else
+                sql += $" {prop},";
+        });
+
+        props.ToList().ForEach(p =>
+        {
+            var prop = ToSnakeCase(p.Name);
+            if (props.ToList().IndexOf(p) == props.Length - 1)
+                sql += $" @{prop})";
+            else if (props.ToList().IndexOf(p) == 0)
+                sql += $"@{prop},";
+            else
+                sql += $" @{prop},";
+        });
+
+        using var connection = new MySqlConnection(GetConnectionString());
+        connection.Open();
+
+        using var cmd = new MySqlCommand(sql, connection);
+        props.ToList().ForEach(prop =>
+        {
+            var key = prop.Name;
+            var value = prop.GetValue(obj);
+            cmd.Parameters.AddWithValue($"@{ToSnakeCase(key)}", value);
+        });
+
+        cmd.ExecuteNonQuery();
+        connection.Close();
+        return obj;
+    }
+
     public static T? GetById<T>(int id)
     {
         var props = typeof(T).GetProperties();
@@ -58,7 +155,6 @@ public static class DbHandler
         var name = typeof(T).ToString();
         List<string> propNames = [.. props.ToList().Select(p => p.Name)];
 
-
         var sql = "SELECT";
 
         props.ToList().ForEach(p =>
@@ -72,7 +168,7 @@ public static class DbHandler
 
         sql += $" {ToSnakeCase(name)}";
 
-        //Console.WriteLine(sql);
+        Console.WriteLine(sql);
 
         using var connection = new MySqlConnection(GetConnectionString());
         connection.Open();
@@ -91,9 +187,9 @@ public static class DbHandler
 
     private static T GetObjectFromReader<T>(MySqlDataReader reader, List<string> propNames, List<PropertyInfo> props)
     {
-        #pragma warning disable JSON001 // Invalid JSON pattern
+#pragma warning disable JSON001 // Invalid JSON pattern
         string json = "{";
-        #pragma warning restore JSON001 // Invalid JSON pattern
+#pragma warning restore JSON001 // Invalid JSON pattern
 
         for (int i = 0; i < reader.FieldCount; i++)
         {

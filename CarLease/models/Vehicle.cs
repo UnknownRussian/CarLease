@@ -7,7 +7,7 @@ public class Vehicle
     public int Doors { get; set; }
     public string Color { get; set; } = string.Empty;
     public int Gears { get; set; }
-    public int TopSpeed { get; set; }
+    public int Topspeed { get; set; }
     public int Hp { get; set; }
     public int Acceleration { get; set; }
     public string ModelYear { get; set; } = string.Empty;
